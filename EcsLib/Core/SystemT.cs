@@ -33,16 +33,16 @@ namespace EcsLib.Core {
             return true;
         }
 
-        internal override int ReserveComponent(object component) {
+        internal override int ReserveComponent(uint entity, object component) {
             if (component is T) {
-                return ReserveComponent((T) component);
+                return ReserveComponent(entity, (T) component);
             }
             else {
                 throw new Exception($"Component Should be {typeof(T).Name}, but recieved {component.GetType().Name}");
             }
         }
 
-        public int ReserveComponent(T component) {
+        public int ReserveComponent(uint entity, T component) {
             var id = -1;
             for (int i = 0; i < _components.Length; i++) {
                 if (!_ocupied.Contains(i)) {
@@ -54,6 +54,7 @@ namespace EcsLib.Core {
                 throw new Exception("All components are occupied, try create system with more available components");
             }
             _ocupied.Add(id);
+            _components[id].Owner = entity;
             _components[id].Value = component;
             return id;
         }

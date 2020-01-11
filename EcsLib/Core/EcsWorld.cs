@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
+using EcsLib.Attributes;
 
 namespace EcsLib.Core {
     public sealed class EcsWorld
@@ -10,15 +12,53 @@ namespace EcsLib.Core {
         private Queue<Entity> _pooledEntities = new Queue<Entity>();
         private List<AbstractSystem> _systems = new List<AbstractSystem>();
         private Dictionary<Type, AbstractSystem> _systemsMap = new Dictionary<Type, AbstractSystem>();
-        private Dictionary<uint, Entity> _entities;
+        private Dictionary<uint, Entity> _entities = new Dictionary<uint, Entity>();
         public IEnumerable<Type> ComponentTypes => _systems.Select(e => e.ComponentType);
 
         public EcsWorld AddSystem<T>(System<T> abstractSystem) where T:struct{
             _systems.Add(abstractSystem);
             abstractSystem.SetWorld(this);
+            _systemsMap[abstractSystem.ComponentType] = abstractSystem;
             return this;
         }
-        
+
+        public void Init()
+        {
+            foreach (var system in _systems)
+            {
+                InjectSystems(system);
+            }
+        }
+
+        private void InjectSystems(AbstractSystem system)
+        {
+            var systemType = typeof(AbstractSystem);
+            var toInjectField = system.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic).Where(e => e.GetCustomAttribute<EcsInjectAttribute>() != null);
+            foreach (var field in toInjectField)
+            {
+                if (systemType.IsAssignableFrom(field.FieldType))
+                {
+                    var componentType = field.FieldType.BaseType.GetGenericArguments()[0];
+                    if (_systemsMap.TryGetValue(componentType, out var toInject))
+                    {
+                        field.SetValue(system, toInject);
+                    }
+                }
+            }
+            var toInjectProperty = system.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic).Where(e => e.GetCustomAttribute<EcsInjectAttribute>() != null);
+            foreach (var field in toInjectProperty)
+            {
+                if (systemType.IsAssignableFrom(field.PropertyType))
+                {
+                    var componentType = field.PropertyType.BaseType.GetGenericArguments()[0];
+                    if (_systemsMap.TryGetValue(componentType, out var toInject))
+                    {
+                        field.SetValue(system, toInject);
+                    }
+                }
+            }
+        }
+
         public void Update() {
             for (int i = 0; i < _systems.Count; i++) {
                 _systems[i].Update();
@@ -28,7 +68,7 @@ namespace EcsLib.Core {
         // TODO: remove boxing
         public int AddComponent<T>(Entity entity, T p) where T : struct {
             if (_systemsMap.TryGetValue(typeof(T), out var system)) {
-                var id = system.ReserveComponent(p);
+                var id = system.ReserveComponent(entity.Id, p);
                 entity.RegisterComponent<T>(id);
                 return id;
             }
@@ -55,6 +95,17 @@ namespace EcsLib.Core {
             else {
                 throw new Exception($"Unregistered component type {cmpType.Name}");
             }
+        }
+
+        public bool TryGetComponent<T>(Entity entity, out T component) where T:struct
+        {
+            component = default;
+            if (_systemsMap.TryGetValue(typeof(T), out var system))
+            {
+                component = (system as System<T>).Components.FirstOrDefault(e => e.Item1 == entity.Id).Item2;
+                return true;
+            }
+            return false;
         }
 
         public EntityBuilder NewEntity()
@@ -102,6 +153,7 @@ namespace EcsLib.Core {
             {
                 _world = world;
                 _entity = new Entity(id);
+                _entity.Init(_world);
             }
 
             public EntityBuilder With<T>() where T : struct
@@ -112,7 +164,6 @@ namespace EcsLib.Core {
 
             public EntityBuilder With<T>(T cmp) where T : struct
             {
-                var id = _entity.AddComponent<T>();
                 _entity.AddComponent<T>(cmp);
                 return this;
             }

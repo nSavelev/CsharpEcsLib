@@ -14,7 +14,7 @@
 
         internal abstract Type ComponentType { get; }
         internal abstract void Update();
-        internal abstract int ReserveComponent(object component);
+        internal abstract int ReserveComponent(uint owner, object component);
         internal abstract void ReleaseComponent(int id);
     }
 }
