@@ -4,17 +4,17 @@ using System.Linq;
 
 namespace EcsLib.Core {
     public sealed class Entity {
-        public int Id { get; }
+        public uint Id { get; }
         private Dictionary<Type, HashSet<int>> _components;
         private EcsWorld _world;
 
-        internal Entity(int id) {
+        internal Entity(uint id) {
             Id = id;
         }
 
         internal void Init(EcsWorld world) {
             _world = world;
-            _components = world.CompoentTypes.ToDictionary(k => k, v => new HashSet<int>());
+            _components = world.ComponentTypes.ToDictionary(k => k, v => new HashSet<int>());
         }
 
         public int GetComponent<T>() where T: struct  {
@@ -36,6 +36,10 @@ namespace EcsLib.Core {
             return _world.AddComponent<T>(this, default(T));
         }
         
+        public int AddComponent<T>(T cmp) where T: struct {
+            return _world.AddComponent<T>(this, cmp);
+        }
+        
         internal void UnregisterComponent<T>(int id) where T: struct  {
             _components[typeof(T)].Add(id);
         }
@@ -45,6 +49,13 @@ namespace EcsLib.Core {
         }
 
         public void Reset() {
+            foreach (var cmpData in _components)
+            {
+                foreach (var id in cmpData.Value)
+                {
+                    _world.RemoveComponent(cmpData.Key, id);
+                }
+            }
             _components.Clear();
         }
     }

@@ -1,34 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace EcsLib.Core {
-    public abstract class ISystem {
-        internal abstract Type ComponentType { get; }
-        internal abstract void Update();
-        internal abstract int ReserveComponent(object component);
-        internal abstract void ReleaseComponent(int id);
-    }
+    public abstract class System<T> : AbstractSystem where T:struct {
 
-    public abstract class BaseSystem<T> : ISystem where T:struct {
-        public IEnumerable<T> Components => _components;
+        private struct Wrap
+        {
+            public uint Owner;
+            public T Value;
+        }
+
+        public IEnumerable<Tuple<uint,T>> Components => _components.Select(e=>new Tuple<uint, T>(e.Owner, e.Value));
         internal override Type ComponentType => typeof(T);
-        protected readonly T[] _components;
+        private readonly Wrap[] _components;
         protected readonly HashSet<int> _ocupied = new HashSet<int>();
         protected readonly bool _isOneTick;
 
-        public BaseSystem(int maxSize) {
-            _components = new T[maxSize];
+        public System(int maxSize) {
+            _components = new Wrap[maxSize];
         }
 
         public void UpdateComponent(int id, T component) {
-            _components[id] = component;
+            _components[id].Value = component;
         }
 
         public bool TryGetComponent(int id, ref T component) {
             if (!_ocupied.Contains(id)) {
                 return false;
             }
-            component = _components[id];
+            component = _components[id].Value;
             return true;
         }
 
@@ -53,7 +54,7 @@ namespace EcsLib.Core {
                 throw new Exception("All components are occupied, try create system with more available components");
             }
             _ocupied.Add(id);
-            _components[id] = component;
+            _components[id].Value = component;
             return id;
         }
 
@@ -67,14 +68,18 @@ namespace EcsLib.Core {
 
         internal override void Update() {
             // TODO: escape allocations
-            foreach (var id in _ocupied) {
-                Iterate(id, _components[id]);
+            foreach (var id in _ocupied)
+            {
+                var cmp = _components[id].Value;
+                Entity entity = _world.GetEntity(_components[id].Owner);
+                Iterate(entity, ref cmp);
+                _components[id].Value = cmp;
             }
             if (_isOneTick) {
                 _ocupied.Clear();
             }
         }
 
-        public abstract void Iterate(int id, T c);
+        public abstract void Iterate(Entity owner, ref T c);
     }
 }
