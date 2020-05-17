@@ -13,7 +13,7 @@ namespace EcsLib.Core
             _world = world;
         }
 
-        internal abstract void Update();
+        internal abstract void Update(float deltaTime);
         internal abstract int ReserveComponent(uint owner, object component);
         internal abstract void ReleaseComponent(int id);
     }

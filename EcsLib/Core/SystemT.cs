@@ -6,7 +6,7 @@ namespace EcsLib.Core
 {
     public abstract class System<T> : AbstractSystem where T : struct
     {
-        private readonly Wrap[] _components;
+        protected readonly Wrap[] _components;
         protected readonly bool _isOneTick;
         protected readonly HashSet<int> _ocupied = new HashSet<int>();
 
@@ -57,28 +57,51 @@ namespace EcsLib.Core
         internal override void ReleaseComponent(int id)
         {
             if (!_ocupied.Contains(id)) throw new ArgumentException($"Component with {id} already released!");
+            OnRemoveComponent(id);
             _ocupied.Remove(id);
             _components[id] = default;
         }
 
-        internal override void Update()
+        protected virtual void OnRemoveComponent(int id)
         {
+        }
+
+        internal override void Update(float deltaTime)
+        {
+            OnPreUpdate(deltaTime);
             // TODO: escape allocations
             foreach (var id in _ocupied) {
                 var cmp = _components[id].Value;
                 var entity = _world.GetEntity(_components[id].Owner);
-                Iterate(entity, ref cmp);
+                Iterate(deltaTime, entity, ref cmp);
                 _components[id].Value = cmp;
             }
-
             if (_isOneTick) _ocupied.Clear();
+            OnPostUpdate(deltaTime);
         }
 
-        public abstract void Iterate(Entity owner, ref T c);
+        protected virtual void OnPreUpdate(float deltaTime)
+        {
+        }
 
-        public abstract Tuple<uint, int, T> GetComponents();
+        protected virtual void OnPostUpdate(float deltaTime)
+        {
+        }
 
-        private struct Wrap
+        public abstract void Iterate(float deltaTime, Entity owner, ref T c);
+
+        public IEnumerable<Tuple<uint, int, T>> GetComponents()
+        {
+            var result = new Tuple<uint, int, T>[_components.Length];
+            for (int i = 0; i < result.Length; i++)
+            {
+                var cmp = _components[i];
+                result[i] = new Tuple<uint, int, T>(cmp.Owner, i, cmp.Value);
+            }
+            return result;
+        }
+
+        protected struct Wrap
         {
             public uint Owner;
             public T Value;

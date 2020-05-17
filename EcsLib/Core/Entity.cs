@@ -74,6 +74,17 @@ namespace EcsLib.Core
             _components[typeof(T)].Add(id);
         }
 
+        public void RemoveAllComponents()
+        {
+            foreach (var cmp in _components)
+            {
+                foreach (var id in cmp.Value)
+                {
+                    _world.RemoveComponent(cmp.Key, id);
+                }
+            }
+        }
+        
         public void Reset()
         {
             foreach (var cmpData in _components)

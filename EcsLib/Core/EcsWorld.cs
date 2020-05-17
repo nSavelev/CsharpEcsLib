@@ -50,9 +50,9 @@ namespace EcsLib.Core
                 }
         }
 
-        public void Update()
+        public void Update(float deltaTime)
         {
-            for (var i = 0; i < _systems.Count; i++) _systems[i].Update();
+            for (var i = 0; i < _systems.Count; i++) _systems[i].Update(deltaTime);
         }
 
         // TODO: remove boxing
@@ -138,6 +138,11 @@ namespace EcsLib.Core
             entity.Reset();
         }
 
+        public void RemoveEntity(Entity entity)
+        {
+            UnregisterEntity(entity);
+        }
+        
         public uint[] GetEntities()
         {
             return _entities.Keys.ToArray();
@@ -145,6 +150,7 @@ namespace EcsLib.Core
 
         public class EntityBuilder
         {
+            public uint Id => _entity.Id;
             private readonly Entity _entity;
             private readonly EcsWorld _world;
 
