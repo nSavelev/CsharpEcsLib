@@ -96,6 +96,17 @@ namespace EcsLib.Core
 
             return false;
         }
+        
+        public bool TryUpdateComponent<T>(int id, T component) where T : struct
+        {
+            component = default;
+            if (_systemsMap.TryGetValue(typeof(T), out var system)) {
+                ((System<T>) system).UpdateComponent(id, component);
+                return true;
+            }
+
+            return false;
+        }
 
         public EntityBuilder NewEntity()
         {
@@ -119,6 +130,11 @@ namespace EcsLib.Core
         {
             _entities.Remove(entity.Id);
             entity.Reset();
+        }
+
+        public uint[] GetEntities()
+        {
+            return _entities.Keys.ToArray();
         }
 
         public class EntityBuilder

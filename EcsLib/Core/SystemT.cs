@@ -76,6 +76,8 @@ namespace EcsLib.Core
 
         public abstract void Iterate(Entity owner, ref T c);
 
+        public abstract Tuple<uint, int, T> GetComponents();
+
         private struct Wrap
         {
             public uint Owner;

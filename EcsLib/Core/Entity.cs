@@ -14,6 +14,12 @@ namespace EcsLib.Core
             Id = id;
         }
 
+        public Entity(Dictionary<Type, HashSet<int>> components, EcsWorld world)
+        {
+            _components = components;
+            _world = world;
+        }
+
         public uint Id { get; }
 
         internal void Init(EcsWorld world)
@@ -22,10 +28,19 @@ namespace EcsLib.Core
             _components = world.ComponentTypes.ToDictionary(k => k, v => new HashSet<int>());
         }
 
-        public int GetComponent<T>() where T : struct
+        public int GetFirstComponent<T>() where T : struct
         {
             if (_components.TryGetValue(typeof(T), out var cmps)) return cmps.First();
             throw new Exception($"Entity {Id} dont have any components of type {typeof(T).Name}");
+        }
+
+        public IEnumerable<int> GetAllComponents<T>() where T : struct
+        {
+            if (_components.TryGetValue(typeof(T), out var cmps))
+            {
+                return cmps.ToArray();
+            }
+            return null;
         }
 
         public IEnumerable<int> GetComponents<T>() where T : struct
@@ -49,6 +64,11 @@ namespace EcsLib.Core
             _components[typeof(T)].Add(id);
         }
 
+        public void UpdateComponent<T>(int id, T component) where T : struct
+        {
+            _world.TryUpdateComponent<T>(id, component);
+        }
+        
         internal void RegisterComponent<T>(int id) where T : struct
         {
             _components[typeof(T)].Add(id);
