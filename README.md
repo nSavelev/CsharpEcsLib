@@ -104,6 +104,26 @@ To work with components use EcsWorld instance
 	if (_world.TryGetComponent(entity, out var pos)){
 		// do smtn with component data
 	}
+    pos.Position = new Vector3(99, 0, 99);
+    if (!_world.TryUpdateComponent<PositionComponent>(id, pos)) {
+        // component not found
+    }
 ```
 
-**COMPONENT MODIFICATION OUTSIZE OF SYSTEMS IS NOW IMPLEMENTED FOR NOW**
+To work with components use Entity
+```C#
+    // Component creation
+    var id = entity.AddComponent(new DamageComponent{
+            Amount = 10
+        });
+    
+       
+    // Component data fetching  
+    var healthId = entity.GetFirstComponent<HealthComponent>();
+    var health = entity.GetComponent<HealthComponent>(healthId);
+    foreach (var dmg in entity.GetComponents<DamageComponent>()){
+        health.Health -= dmg.Amount;
+    }
+    entity.UpdateComponent<HealthComponent>(healthId, health);
+```
+

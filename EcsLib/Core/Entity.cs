@@ -34,15 +34,15 @@ namespace EcsLib.Core
             throw new Exception($"Entity {Id} dont have any components of type {typeof(T).Name}");
         }
 
-        public IEnumerable<int> GetAllComponents<T>() where T : struct
+        public T GetComponent<T>(int id) where T : struct
         {
-            if (_components.TryGetValue(typeof(T), out var cmps))
+            if (_world.TryGetComponent<T>(id, out var cmp))
             {
-                return cmps.ToArray();
+                return cmp;
             }
-            return null;
+            return default(T);
         }
-
+        
         public IEnumerable<int> GetComponents<T>() where T : struct
         {
             if (_components.TryGetValue(typeof(T), out var cmps)) return cmps;

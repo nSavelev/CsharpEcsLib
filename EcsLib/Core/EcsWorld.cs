@@ -97,6 +97,12 @@ namespace EcsLib.Core
             return false;
         }
         
+        public bool TryGetComponent<T>(int id, out T component) where T : struct
+        {
+            component = default;
+            return (_systemsMap[typeof(T)] as System<T>).TryGetComponent(id, ref component);
+        }
+        
         public bool TryUpdateComponent<T>(int id, T component) where T : struct
         {
             component = default;
